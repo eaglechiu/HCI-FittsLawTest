@@ -1,5 +1,7 @@
 # HCI-FittsLawTest
 
+**[直接開啟線上實驗（Open Online Experiment）](https://eaglechiu.github.io/HCI-FittsLawTest/)**
+
 以互動地圖標記選取研究菲茲定律（Fitts’ Law）與目標幾何形狀（Target Geometry）的人機互動（Human–Computer Interaction, HCI）實驗。
 
 使用者在地圖上尋找並點擊青色目標標記（Target Marker），背景同時呈現 1–5 個灰色干擾標記（Distractor Markers）。本專案控制移動距離、標記外接圓半徑與移動方向，觀察不同形狀的選取時間（Selection Time）與誤點（Misses）。
@@ -17,11 +19,11 @@
 
 ## 開始使用（Getting Started）
 
-1. 下載 [fitts_interactive_map_6dir.html](./fitts_interactive_map_6dir.html)，以桌面瀏覽器（Desktop Browser）開啟。
+1. 以桌面瀏覽器（Desktop Browser）開啟 [線上實驗（Online Experiment）](https://eaglechiu.github.io/HCI-FittsLawTest/)，即可開始使用，不需要下載或安裝。
 2. 依頁面提示開始實驗，尋找並點擊青色標記；每個條件先完成不記錄的暖身定位（Warm-up Positioning），再進行六次正式選取。
 3. 完成兩個實驗階段（Sessions）後，使用頁面上的匯出功能保存結果；需要轉移進度時，使用進度匯出／匯入（Export / Import Progress）。
 
-實驗為單一 HTML 檔案，可直接在本機執行。進度保存在瀏覽器本機儲存空間（localStorage）；更換瀏覽器或清除網站資料前，請先匯出進度備份。地圖需要足夠的桌面顯示空間，才能容納最長的 520 px 移動距離。
+網站由 GitHub Pages 提供靜態網站服務，也可下載 [HTML 檔案](./fitts_interactive_map_6dir.html) 離線執行。進度保存在瀏覽器本機儲存空間（localStorage）；更換瀏覽器或清除網站資料前，請先匯出進度備份。下載版與線上版的進度不會自動共用；轉移時先在原頁面選擇 `Download Progress Backup`，再於新頁面使用 `Import Progress`。地圖需要足夠的桌面顯示空間，才能容納最長的 520 px 移動距離。
 
 ## 內容導覽（Contents）
 
