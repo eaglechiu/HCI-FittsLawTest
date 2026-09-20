@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Interactive Map Marker Selection Experiment</title>
+<style>
+  :root { font-family: Arial, Helvetica, sans-serif; color:#1f2937; background:#f7f7f8; }
+  * { box-sizing: border-box; }
+  body { margin:0; }
+  .wrap { max-width:1450px; margin:0 auto; padding:20px; }
+  h1 { margin:0 0 8px; font-size:28px; }
+  .sub { color:#6b7280; margin-bottom:16px; }
+  .panel { background:white; border:1px solid #d1d5db; border-radius:14px; padding:16px; margin-bottom:14px; }
+  .controls { display:flex; flex-wrap:wrap; gap:12px 16px; align-items:end; }
+  label { font-size:13px; color:#4b5563; display:block; margin-bottom:4px; }
+  select, button { font:inherit; }
+  select { padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; background:white; }
+  button { border:0; border-radius:9px; padding:10px 14px; cursor:pointer; background:#111827; color:white; }
+  button.secondary { background:#e5e7eb; color:#111827; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .stats { display:grid; grid-template-columns:repeat(6,minmax(120px,1fr)); gap:10px; margin-top:14px; }
+  .stat { background:#f8fafc; border-radius:10px; padding:10px; border:1px solid #e5e7eb; }
+  .stat b { display:block; font-size:18px; margin-top:2px; }
+  #arena { position:relative; height:900px; background:#eef5ef; border:1px solid #b8c7bd; border-radius:14px; overflow:hidden; user-select:none; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+  #arena::after { content:""; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px); background-size:44px 44px; opacity:.45; z-index:0; }
+  #mapLayer, #targetLayer, #debugLayer { position:absolute; inset:0; width:100%; height:100%; }
+  #mapLayer { z-index:1; pointer-events:none; }
+  #debugLayer { z-index:2; pointer-events:none; }
+  #targetLayer { z-index:3; }
+  .hint { position:absolute; left:14px; top:12px; z-index:5; background:rgba(255,255,255,.94); padding:8px 11px; border-radius:9px; font-size:13px; color:#334155; border:1px solid rgba(148,163,184,.35); }
+  .map-task { font-weight:700; color:#0f172a; }
+  details.diagnostics { margin-top:12px; border-top:1px solid #e5e7eb; padding-top:10px; }
+  details.diagnostics summary { cursor:pointer; color:#64748b; font-size:13px; }
+  .legend { display:flex; gap:18px; align-items:center; flex-wrap:wrap; margin-top:10px; font-size:13px; color:#475569; }
+  .dot { width:14px; height:14px; display:inline-block; border-radius:50%; vertical-align:-2px; margin-right:6px; border:2px solid #0f172a; }
+  .dot.target { background:#22d3ee; } .dot.other { background:#cbd5e1; }
+  .table-wrap { overflow:auto; max-height:360px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th, td { border-bottom:1px solid #e5e7eb; padding:7px 8px; text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align:left; }
+  th { position:sticky; top:0; background:#f3f4f6; z-index:2; }
+  .note { font-size:13px; line-height:1.55; color:#475569; }
+  code { background:#f1f5f9; padding:1px 4px; border-radius:4px; }
+  .remaining-badge { position:absolute; right:12px; top:10px; z-index:4; background:rgba(17,24,39,.86); color:white; padding:5px 8px; border-radius:7px; font-size:11px; letter-spacing:.2px; pointer-events:none; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .tab-btn { background:#e5e7eb; color:#111827; padding:8px 12px; }
+  .tab-btn.active { background:#111827; color:white; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+  .summary-note { font-size:12px; color:#64748b; margin:6px 0 10px; }
+  .summary-actions { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px; }
+  @media (max-width:900px){ .stats{grid-template-columns:repeat(2,1fr);} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Interactive Map Marker Selection</h1>
+  <div class="sub">Select the marker whose color is different from the others. The experiment is split into two sessions and is automatically merged into one dataset.</div>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="startBtn">Start Session 1</button>
+      <button id="exportBtn" class="secondary" disabled>Export Combined Excel (.xlsx)</button>
+      <button id="backupBtn" class="secondary">Download Progress Backup</button>
+      <label for="importProgress" class="secondary" style="display:inline-block;padding:10px 14px;border-radius:9px;cursor:pointer;background:#e5e7eb;color:#111827;margin:0;">Import Progress<input id="importProgress" type="file" accept="application/json,.json" style="display:none"></label>
+      <button id="toggleVectorBtn" class="secondary">Show experiment vector</button>
+      <button id="resetBtn" class="secondary" style="background:#fee2e2;color:#991b1b;">Reset Full Experiment</button>
+    </div>
+    <div class="legend"><span><span class="dot target"></span>Target marker</span><span><span class="dot other"></span>Other marker</span><span><b>Task:</b> click the marker with the different color as quickly and accurately as possible.</span></div>
+    <details class="diagnostics">
+      <summary>Experiment diagnostics (keep closed for participant testing)</summary>
+      <div class="stats">
+        <div class="stat">Session<b id="sessionStat">-</b></div>
+        <div class="stat">Session Trial<b id="trialStat">0 / 144</b></div>
+        <div class="stat">Block<b id="blockStat">-</b></div>
+        <div class="stat">Shape<b id="shapeStat">-</b></div>
+        <div class="stat">R<b id="rStat">-</b></div>
+        <div class="stat">Assigned A<b id="assignedAStat">-</b></div>
+        <div class="stat">Actual A<b id="aStat">-</b></div>
+        <div class="stat">ID<sub>R</sub><b id="idStat">-</b></div>
+        <div class="stat">Last MT<b id="mtStat">-</b></div>
+      </div>
+    </details>
+  </div>
+
+  <div id="arena">
+    <div id="remainingBadge" class="remaining-badge">Session remaining: 144 · Total remaining: 288</div>
+    <div class="hint"><span class="map-task">Find the cyan marker</span> · ignore the gray markers</div>
+    <svg id="mapLayer"></svg>
+    <svg id="debugLayer"></svg>
+    <svg id="targetLayer"></svg>
+  </div>
+
+  <div class="panel note">
+    <b>Scenario definition</b><br>
+    This prototype represents an interactive monitoring map. Each trial contains one <b>cyan target marker</b> and a random <b>1–5 gray distractor markers</b>. The participant selects the marker whose color differs from the others.<br>
+    The target center is placed exactly one assigned movement distance <b>A</b> from the previous target center. Current A levels are <b>280 and 520 px</b>. R is the common circumradius of every marker shown in that trial, with levels <b>30, 50, and 70 px</b>. The target shape is the experimental Shape condition; distractor shapes are randomized and may match the target shape.<br>
+    Marker overlap is prevented. Target color, distractor color, map background, marker stroke, and visual styling are held constant. Star / Rounded Star and Triangle / Rounded Triangle preserve the incoming-tip orientation rule. Each condition contains six recorded movements using the fixed six-direction set <b>0°, 60°, 120°, 180°, 240°, 300°</b>, exactly once each. Direction order is controlled in opposite pairs so every movement remains exactly A while the path stays inside the map.
+  </div>
+
+  <div class="panel">
+    <h2 style="margin-top:0;font-size:20px;">Results</h2>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="trialPanel">Trial Data</button>
+      <button class="tab-btn" data-tab="conditionPanel">Condition Summary</button>
+      <button class="tab-btn" data-tab="shapePanel">Shape Summary</button>
+      <button class="tab-btn" data-tab="shapeRadiusPanel">Shape × Radius Summary</button>
+    </div>
+
+    <div id="trialPanel" class="tab-panel active">
+      <div class="summary-note">Combined raw trials from both sessions. This is worksheet 1 in the exported Excel workbook.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Session</th><th>Session Trial</th><th>Global Trial</th><th>Condition ID</th><th>Block</th><th>Shape</th><th>R (px)</th><th>Assigned A</th><th>Rep</th><th>Prev X</th><th>Prev Y</th><th>Target X</th><th>Target Y</th><th>Actual A</th><th>Angle (deg)</th><th>ID_R (bits)</th><th>MT (ms)</th><th>Distractors</th><th>Misses</th><th>Click X</th><th>Click Y</th><th>Endpoint Error (px)</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <div id="conditionPanel" class="tab-panel">
+      <div class="summary-note">Mean values for each Shape × Radius × Distance condition. Each completed condition contains 6 recorded movements — one at each of the six controlled movement directions — and belongs to one session.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Condition ID</th><th>Session</th><th>Shape</th><th>R (px)</th><th>A (px)</th><th>Trials</th><th>Avg ID_R</th><th>Avg MT (ms)</th><th>SD MT</th><th>Total Misses</th><th>Avg Endpoint Error</th></tr></thead>
+          <tbody id="conditionSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="shapePanel" class="tab-panel">
+      <div class="summary-note">Mean values aggregated across both sessions and all radii for each of the 8 shapes.</div>
+      
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Shape</th><th>Trials</th><th>Avg R (px)</th><th>Avg A (px)</th><th>Avg ID_R (bits)</th><th>Avg MT (ms)</th><th>Total Misses</th><th>Error Rate</th><th>Avg Endpoint Error (px)</th></tr></thead>
+          <tbody id="shapeSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="shapeRadiusPanel" class="tab-panel">
+      <div class="summary-note">Mean values for all 8 shapes × 3 circumradius levels (30 / 50 / 70 px), giving 24 balanced conditions.</div>
+      
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Shape</th><th>R (px)</th><th>Trials</th><th>Avg A (px)</th><th>Avg ID_R (bits)</th><th>Avg MT (ms)</th><th>Total Misses</th><th>Error Rate</th><th>Avg Endpoint Error (px)</th></tr></thead>
+          <tbody id="shapeRadiusSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const arena = document.getElementById('arena');
+const mapLayer = document.getElementById('mapLayer');
+const targetLayer = document.getElementById('targetLayer');
+const debugLayer = document.getElementById('debugLayer');
+const startBtn = document.getElementById('startBtn');
+const exportBtn = document.getElementById('exportBtn');
+const tbody = document.getElementById('tbody');
+const toggleVectorBtn = document.getElementById('toggleVectorBtn');
+const resetBtn = document.getElementById('resetBtn');
+const backupBtn = document.getElementById('backupBtn');
+const importProgress = document.getElementById('importProgress');
+const remainingBadge = document.getElementById('remainingBadge');
+const conditionSummaryBody = document.getElementById('conditionSummaryBody');
+const shapeSummaryBody = document.getElementById('shapeSummaryBody');
+const shapeRadiusSummaryBody = document.getElementById('shapeRadiusSummaryBody');
+
+const stats = {
+  session: document.getElementById('sessionStat'), trial: document.getElementById('trialStat'), block: document.getElementById('blockStat'), shape: document.getElementById('shapeStat'), r: document.getElementById('rStat'),
+  assignedA: document.getElementById('assignedAStat'), a: document.getElementById('aStat'), id: document.getElementById('idStat'), mt: document.getElementById('mtStat')
+};
+
+const SHAPES = ['star','rounded-star','triangle','rounded-triangle','square','rounded-square','hexagon','circle'];
+const LABELS = {
+  'star':'Star','rounded-star':'Rounded Star','triangle':'Triangle','rounded-triangle':'Rounded Triangle',
+  'square':'Square','rounded-square':'Rounded Square','hexagon':'Hexagon','circle':'Circle'
+};
+
+const STORAGE_KEY = 'fitts_map_marker_two_session_6dir_v3';
+const EXPERIMENT_VERSION = 3;
+let rows = [];
+let current = null;
+let previousCenter = null;
+let t0 = 0;
+let running = false;
+let showVector = false;
+let blockPlan = [];
+let blockIndex = 0;
+let repInBlock = 0;
+let warmupPending = false;
+let currentSession = 1;
+const RADII = [30,50,70];
+const DISTANCES = [280,520];
+const DIRECTION_DEGREES = [0,60,120,180,240,300];
+const REPS_PER_BLOCK = 6;
+const CONDITIONS_PER_SESSION = 24;
+const TRIALS_PER_SESSION = CONDITIONS_PER_SESSION * REPS_PER_BLOCK;
+const TOTAL_TRIALS = TRIALS_PER_SESSION * 2;
+let state = null;
+
+function rand(min,max){ return min + Math.random()*(max-min); }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function rad2deg(r){ return r*180/Math.PI; }
+
+// Canonical orientation rule:
+// local +X is the reference-radius direction for every non-circular shape.
+// Shapes are defined/scaled so a designated outer vertex lies on +X at distance R.
+function canonicalPolarPoints(shape,R){
+  const pts=[];
+  if(shape==='triangle' || shape==='rounded-triangle'){
+    for(let k=0;k<3;k++) pts.push([R, k*2*Math.PI/3]); // designated vertex is k=0
+  } else if(shape==='square' || shape==='rounded-square'){
+    for(let k=0;k<4;k++) pts.push([R, k*Math.PI/2]);
+  } else if(shape==='hexagon'){
+    for(let k=0;k<6;k++) pts.push([R, k*Math.PI/3]);
+  } else if(shape==='star' || shape==='rounded-star'){
+    const inner=R*0.45;
+    for(let k=0;k<10;k++) pts.push([(k%2===0)?R:inner, k*Math.PI/5]); // outer k=0 is designated vertex
+  }
+  return pts;
+}
+
+// Compute WORLD coordinates directly. This avoids any ambiguity from SVG transform order.
+// For triangle/star, vertex 0 is mathematically forced to lie on the movement axis.
+// It should face the incoming cursor path, i.e. toward the previous target (reverse of travel).
+
+function referenceAngleForShape(shape, movementAngle){
+  if(['triangle','rounded-triangle','star','rounded-star'].includes(shape)) return movementAngle + Math.PI;
+  return movementAngle;
+}
+
+function worldPolygonPoints(shape,R,cx,cy,angle){
+  return canonicalPolarPoints(shape,R).map(([rr,a])=>{
+    const aa=a+angle;
+    return [cx+rr*Math.cos(aa), cy+rr*Math.sin(aa)];
+  });
+}
+
+function makeMarkerElement(shape,R,cx,cy,angle,isTarget){
+  const g=document.createElementNS(SVG_NS,'g');
+  g.style.cursor='pointer';
+  g.dataset.role=isTarget?'target':'distractor';
+  let el;
+  if(shape==='circle'){
+    el=document.createElementNS(SVG_NS,'circle');
+    el.setAttribute('cx',String(cx)); el.setAttribute('cy',String(cy)); el.setAttribute('r',String(R));
+  } else {
+    el=document.createElementNS(SVG_NS,'polygon');
+    let geomR=R;
+    if(shape.startsWith('rounded-')){
+      const strokeW=Math.max(4,R*0.22);
+      geomR=Math.max(1,R-strokeW/2);
+      el.setAttribute('points', worldPolygonPoints(shape,geomR,cx,cy,angle).map(p=>p.join(',')).join(' '));
+      el.setAttribute('stroke-linejoin','round');
+      el.setAttribute('stroke-width',String(strokeW));
+      el.setAttribute('paint-order','stroke fill');
+    } else {
+      el.setAttribute('points', worldPolygonPoints(shape,R,cx,cy,angle).map(p=>p.join(',')).join(' '));
+      el.setAttribute('stroke-width','2.5');
+      el.setAttribute('stroke-linejoin','miter');
+    }
+  }
+  el.setAttribute('fill',isTarget?'#22d3ee':'#cbd5e1');
+  el.setAttribute('stroke',isTarget?'#0e7490':'#64748b');
+  el.setAttribute('vector-effect','non-scaling-stroke');
+  if(isTarget){
+    el.addEventListener('pointerdown',hitTarget);
+  }else{
+    el.addEventListener('pointerdown',(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      if(running && current && !current.isSessionAnchor) current.misses=(current.misses||0)+1;
+    });
+  }
+  g.appendChild(el);
+  return g;
+}
+
+function makeTrialMarkers(shape,R,cx,cy,angle,distractors){
+  targetLayer.innerHTML='';
+  for(const d of distractors){
+    const dShape=d.shape;
+    const dAngle=0;
+    targetLayer.appendChild(makeMarkerElement(dShape,R,d.x,d.y,dAngle,false));
+  }
+  targetLayer.appendChild(makeMarkerElement(shape,R,cx,cy,angle,true));
+}
+
+function drawDebug(prev,cur,angle,R){
+  debugLayer.innerHTML='';
+  if(!showVector || !prev || !cur) return;
+  const line=document.createElementNS(SVG_NS,'line');
+  line.setAttribute('x1',prev.x); line.setAttribute('y1',prev.y); line.setAttribute('x2',cur.x); line.setAttribute('y2',cur.y);
+  line.setAttribute('stroke','#94a3b8'); line.setAttribute('stroke-width','2'); line.setAttribute('stroke-dasharray','7 6');
+  debugLayer.appendChild(line);
+  const x2=cur.x + R*Math.cos(angle), y2=cur.y + R*Math.sin(angle);
+  const ref=document.createElementNS(SVG_NS,'line');
+  ref.setAttribute('x1',cur.x); ref.setAttribute('y1',cur.y); ref.setAttribute('x2',x2); ref.setAttribute('y2',y2);
+  ref.setAttribute('stroke','#ef4444'); ref.setAttribute('stroke-width','3');
+  debugLayer.appendChild(ref);
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function buildMasterConditions(){
+  const conditions=[];
+  let conditionNum=1;
+  SHAPES.forEach((shape,si)=>{
+    RADII.forEach((R,ri)=>{
+      DISTANCES.forEach((A,ai)=>{
+        // Checkerboard assignment gives each shape 3 conditions/session, each radius 8/session, each A 12/session.
+        const session=((si+ri+ai)%2)+1;
+        conditions.push({shape,R,A,conditionId:`C${String(conditionNum).padStart(2,'0')}`,session});
+        conditionNum++;
+      });
+    });
+  });
+  return conditions;
+}
+
+function makeDirectionSchedule(conditionNum){
+  // Use opposite direction pairs consecutively. Each pair returns to the block anchor,
+  // keeping the six-direction path spatially bounded even when A = 520 px.
+  // Alternate mirrored orientation across conditions so outbound/return roles are balanced.
+  const downPattern = [[0,180],[60,240],[120,300]];
+  const upPattern   = [[180,0],[240,60],[300,120]];
+  const pairs = (conditionNum % 2 === 0 ? downPattern : upPattern).map(p=>p.slice());
+  shuffle(pairs);
+  return pairs.flat();
+}
+
+function makeDistractorSchedule(conditionNum){
+  // Every condition sees 1,2,3,4,5 distractors at least once. The sixth count is
+  // rotated across conditions, then the order is shuffled independently of direction.
+  const extra = ((conditionNum-1) % 5) + 1;
+  return shuffle([1,2,3,4,5,extra]);
+}
+
+function createFreshState(){
+  const conditions=buildMasterConditions();
+  const trialPlans={};
+  conditions.forEach((c,idx)=>{
+    trialPlans[c.conditionId]={
+      directions:makeDirectionSchedule(idx+1),
+      distractors:makeDistractorSchedule(idx+1)
+    };
+  });
+  return {
+    version:EXPERIMENT_VERSION,
+    createdAt:new Date().toISOString(),
+    plans:{
+      1:shuffle(conditions.filter(c=>c.session===1).map(c=>c.conditionId)),
+      2:shuffle(conditions.filter(c=>c.session===2).map(c=>c.conditionId))
+    },
+    conditions,
+    trialPlans,
+    rows:[],
+    sessions:{1:{complete:false,completedAt:null},2:{complete:false,completedAt:null}}
+  };
+}
+
+function saveState(){
+  if(!state) return;
+  state.rows=rows;
+  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); }catch(err){ console.warn('Could not save local progress',err); }
+}
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    const parsed=JSON.parse(raw);
+    if(parsed.version!==EXPERIMENT_VERSION) return null;
+    return parsed;
+  }catch(err){ return null; }
+}
+
+function conditionById(id){ return state.conditions.find(c=>c.conditionId===id); }
+function rowsForSession(s){ return rows.filter(r=>r.session===s); }
+function rowsForCondition(id){ return rows.filter(r=>r.conditionId===id); }
+function isConditionComplete(id){ return rowsForCondition(id).length>=REPS_PER_BLOCK; }
+function remainingConditionIdsForSession(s){ return state.plans[s].filter(id=>!isConditionComplete(id)); }
+function sessionIsComplete(s){ return remainingConditionIdsForSession(s).length===0; }
+function sessionTrialCount(s){ return rowsForSession(s).length; }
+function determineNextSession(){ if(!sessionIsComplete(1)) return 1; if(!sessionIsComplete(2)) return 2; return 0; }
+function buildSessionPlan(s){ return remainingConditionIdsForSession(s).map(conditionById); }
+
+function inBounds(p,R){
+  const rect=arena.getBoundingClientRect();
+  const margin=R+24;
+  return p.x>=margin && p.x<=rect.width-margin && p.y>=margin+34 && p.y<=rect.height-margin;
+}
+
+function controlledBlockAnchor(A,R,directionSchedule){
+  const rect=arena.getBoundingClientRect();
+  const margin=R+24;
+  const top=margin+34, bottom=rect.height-margin;
+  const left=margin, right=rect.width-margin;
+
+  // Because opposite pairs are consecutive, every second movement returns to this anchor.
+  // Therefore only the first direction of each pair is an excursion from the anchor.
+  const outward=[directionSchedule[0],directionSchedule[2],directionSchedule[4]];
+  const dx=outward.map(d=>A*Math.cos(d*Math.PI/180));
+  const dy=outward.map(d=>A*Math.sin(d*Math.PI/180));
+  const minDx=Math.min(0,...dx), maxDx=Math.max(0,...dx);
+  const minDy=Math.min(0,...dy), maxDy=Math.max(0,...dy);
+
+  const xMin=left-minDx, xMax=right-maxDx;
+  const yMin=top-minDy, yMax=bottom-maxDy;
+  if(xMin>xMax || yMin>yMax){
+    throw new Error(`Arena is too small for six controlled directions at A=${A}, R=${R}.`);
+  }
+  return {x:rand(xMin,xMax),y:rand(yMin,yMax)};
+}
+
+function controlledTargetCenter(prev,A,R,directionDeg){
+  const a=directionDeg*Math.PI/180;
+  const p={x:prev.x+A*Math.cos(a),y:prev.y+A*Math.sin(a)};
+  if(!inBounds(p,R)) throw new Error(`Controlled direction ${directionDeg}° is out of bounds for A=${A}, R=${R}.`);
+  return {center:p,movementAngle:a};
+}
+
+function randomDistractors(targetCenter,R,count){
+  const rect=arena.getBoundingClientRect();
+  const margin=R+24;
+  const minDist=2*R+18;
+  const out=[];
+  let attempts=0;
+  while(out.length<count && attempts<5000){
+    attempts++;
+    const p={x:rand(margin,rect.width-margin),y:rand(margin+34,rect.height-margin)};
+    if(dist(p,targetCenter)<minDist) continue;
+    if(out.some(d=>dist(p,d)<minDist)) continue;
+    out.push({...p,shape:SHAPES[Math.floor(Math.random()*SHAPES.length)]});
+  }
+  return out;
+}
+
+function drawMapBackground(){
+  const rect=arena.getBoundingClientRect();
+  mapLayer.innerHTML='';
+  const add=(name,attrs)=>{ const el=document.createElementNS(SVG_NS,name); for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,String(v)); mapLayer.appendChild(el); return el; };
+  // Static, low-contrast map-like context; no animation and no labels near markers.
+  add('rect',{x:0,y:0,width:rect.width,height:rect.height,fill:'#eef5ef'});
+  add('rect',{x:55,y:80,width:220,height:145,rx:26,fill:'#dcebdc'});
+  add('rect',{x:rect.width-300,y:rect.height-230,width:240,height:170,rx:28,fill:'#dfeedd'});
+  const roads=[
+    `M -30 ${rect.height*0.32} C ${rect.width*0.25} ${rect.height*0.22}, ${rect.width*0.60} ${rect.height*0.48}, ${rect.width+40} ${rect.height*0.36}`,
+    `M ${rect.width*0.18} -20 C ${rect.width*0.30} ${rect.height*0.30}, ${rect.width*0.48} ${rect.height*0.68}, ${rect.width*0.70} ${rect.height+30}`,
+    `M -20 ${rect.height*0.72} C ${rect.width*0.30} ${rect.height*0.62}, ${rect.width*0.72} ${rect.height*0.82}, ${rect.width+20} ${rect.height*0.70}`
+  ];
+  for(const d of roads){ add('path',{d,fill:'none',stroke:'#ffffff','stroke-width':30,'stroke-linecap':'round',opacity:.9}); add('path',{d,fill:'none',stroke:'#cbd5e1','stroke-width':2,'stroke-dasharray':'8 10',opacity:.8}); }
+}
+
+function mean(values){
+  if(!values.length) return NaN;
+  return values.reduce((a,b)=>a+b,0)/values.length;
+}
+
+function groupRows(keyFn){
+  const groups=new Map();
+  for(const r of rows){
+    const key=keyFn(r);
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(r);
+  }
+  return groups;
+}
+
+function sd(values){
+  if(values.length<2) return 0;
+  const m=mean(values);
+  return Math.sqrt(values.reduce((acc,v)=>acc+(v-m)*(v-m),0)/(values.length-1));
+}
+
+function conditionSummaryData(){
+  const groups=groupRows(r=>r.conditionId);
+  return state.conditions.map(c=>{
+    const g=groups.get(c.conditionId)||[];
+    return {
+      conditionId:c.conditionId,session:c.session,shape:LABELS[c.shape],R:c.R,A:c.A,n:g.length,
+      avgID:mean(g.map(r=>r.idR)),avgMT:mean(g.map(r=>r.MT)),sdMT:sd(g.map(r=>r.MT)),
+      misses:g.reduce((a,r)=>a+r.misses,0),avgEndpointError:mean(g.map(r=>r.endpointError))
+    };
+  });
+}
+
+function shapeSummaryData(){
+  const groups=groupRows(r=>r.shape);
+  return SHAPES.map(k=>LABELS[k]).map(shape=>{
+    const g=groups.get(shape)||[];
+    return {
+      shape,
+      n:g.length,
+      avgR:mean(g.map(r=>r.R)),
+      avgA:mean(g.map(r=>r.A)),
+      avgID:mean(g.map(r=>r.idR)),
+      avgMT:mean(g.map(r=>r.MT)),
+      misses:g.reduce((a,r)=>a+r.misses,0),
+      errorRate:g.length ? g.reduce((a,r)=>a+r.misses,0)/(g.length+g.reduce((a,r)=>a+r.misses,0)) : NaN,
+      avgEndpointError:mean(g.map(r=>r.endpointError))
+    };
+  });
+}
+
+function shapeRadiusSummaryData(){
+  const groups=groupRows(r=>`${r.shape}|${r.R}`);
+  const out=[];
+  for(const shapeKey of SHAPES){
+    const shape=LABELS[shapeKey];
+    for(const R of RADII){
+      const g=groups.get(`${shape}|${R}`)||[];
+      out.push({
+        shape,R,n:g.length,
+        avgA:mean(g.map(r=>r.A)),
+        avgID:mean(g.map(r=>r.idR)),
+        avgMT:mean(g.map(r=>r.MT)),
+        misses:g.reduce((a,r)=>a+r.misses,0),
+        errorRate:g.length ? g.reduce((a,r)=>a+r.misses,0)/(g.length+g.reduce((a,r)=>a+r.misses,0)) : NaN,
+        avgEndpointError:mean(g.map(r=>r.endpointError))
+      });
+    }
+  }
+  return out;
+}
+
+function fmt(v,d=2){ return Number.isFinite(v)?v.toFixed(d):'-'; }
+
+function updateSummaries(){
+  conditionSummaryBody.innerHTML='';
+  for(const r of conditionSummaryData().filter(r=>r.n>0)){
+    const tr=document.createElement('tr');
+    [r.conditionId,r.session,r.shape,r.R,r.A,r.n,fmt(r.avgID,4),fmt(r.avgMT,2),fmt(r.sdMT,2),r.misses,fmt(r.avgEndpointError,2)].forEach(v=>{
+      const td=document.createElement('td'); td.textContent=v; tr.appendChild(td);
+    });
+    conditionSummaryBody.appendChild(tr);
+  }
+
+  shapeSummaryBody.innerHTML='';
+  for(const r of shapeSummaryData()){
+    const tr=document.createElement('tr');
+    [r.shape,r.n,fmt(r.avgR,1),fmt(r.avgA,2),fmt(r.avgID,4),fmt(r.avgMT,2),r.misses,Number.isFinite(r.errorRate)?(r.errorRate*100).toFixed(2)+'%':'-',fmt(r.avgEndpointError,2)].forEach(v=>{
+      const td=document.createElement('td'); td.textContent=v; tr.appendChild(td);
+    });
+    shapeSummaryBody.appendChild(tr);
+  }
+
+  shapeRadiusSummaryBody.innerHTML='';
+  for(const r of shapeRadiusSummaryData()){
+    const tr=document.createElement('tr');
+    [r.shape,r.R,r.n,fmt(r.avgA,2),fmt(r.avgID,4),fmt(r.avgMT,2),r.misses,Number.isFinite(r.errorRate)?(r.errorRate*100).toFixed(2)+'%':'-',fmt(r.avgEndpointError,2)].forEach(v=>{
+      const td=document.createElement('td'); td.textContent=v; tr.appendChild(td);
+    });
+    shapeRadiusSummaryBody.appendChild(tr);
+  }
+  const hasRows=rows.length>0;
+}
+
+function updateRemaining(){
+  const s=currentSession || determineNextSession() || 2;
+  const sessionRemaining=Math.max(0,TRIALS_PER_SESSION-sessionTrialCount(s));
+  const totalRemaining=Math.max(0,TOTAL_TRIALS-rows.length);
+  remainingBadge.textContent=`Session ${s} remaining: ${sessionRemaining} · Total remaining: ${totalRemaining}`;
+}
+
+function updateStartButton(){
+  const next=determineNextSession();
+  if(next===1) startBtn.textContent=rowsForSession(1).length?`Resume Session 1 (${sessionTrialCount(1)}/${TRIALS_PER_SESSION})`:'Start Session 1';
+  else if(next===2) startBtn.textContent=rowsForSession(2).length?`Resume Session 2 (${sessionTrialCount(2)}/${TRIALS_PER_SESSION})`:'Continue Session 2';
+  else startBtn.textContent='Full Experiment Complete';
+  startBtn.disabled=next===0;
+  exportBtn.disabled=rows.length===0;
+}
+
+
+function activateTab(id){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===id));
+}
+
+function xmlEscape(v){
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function excelCol(n){
+  let s='';
+  while(n>0){ n--; s=String.fromCharCode(65+(n%26))+s; n=Math.floor(n/26); }
+  return s;
+}
+
+function worksheetXml(data){
+  let rowsXml='';
+  for(let r=0;r<data.length;r++){
+    let cells='';
+    for(let c=0;c<data[r].length;c++){
+      const ref=excelCol(c+1)+(r+1);
+      const v=data[r][c];
+      if(typeof v==='number' && Number.isFinite(v)) cells+=`<c r="${ref}"><v>${v}</v></c>`;
+      else cells+=`<c r="${ref}" t="inlineStr"><is><t>${xmlEscape(v)}</t></is></c>`;
+    }
+    rowsXml+=`<row r="${r+1}">${cells}</row>`;
+  }
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rowsXml}</sheetData></worksheet>`;
+}
+
+function crc32(bytes){
+  let crc=0xFFFFFFFF;
+  for(const b of bytes){
+    crc ^= b;
+    for(let k=0;k<8;k++) crc=(crc>>>1)^((crc&1)?0xEDB88320:0);
+  }
+  return (crc^0xFFFFFFFF)>>>0;
+}
+
+function u16(n){ return [n&255,(n>>>8)&255]; }
+function u32(n){ return [n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]; }
+
+function makeZip(files){
+  const te=new TextEncoder();
+  const locals=[]; const centrals=[]; let offset=0;
+  for(const f of files){
+    const name=te.encode(f.name); const data=te.encode(f.text); const crc=crc32(data);
+    const local=new Uint8Array([
+      ...u32(0x04034b50),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...name,...data
+    ]);
+    locals.push(local);
+    const central=new Uint8Array([
+      ...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset),...name
+    ]);
+    centrals.push(central); offset+=local.length;
+  }
+  const centralSize=centrals.reduce((a,b)=>a+b.length,0);
+  const end=new Uint8Array([
+    ...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),
+    ...u32(centralSize),...u32(offset),...u16(0)
+  ]);
+  return new Blob([...locals,...centrals,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
+function exportWorkbook(){
+  const trialHeader=['Session','Session_Trial','Global_Trial','Condition_ID','Block','Shape','R_px','Assigned_A_px','Rep','Prev_X','Prev_Y','Target_X','Target_Y','Actual_A_px','Movement_Angle_deg','ID_R_bits','MT_ms','Distractors','Misses','Click_X','Click_Y','Endpoint_Error_px'];
+  const trialData=[trialHeader,...rows.map(r=>[
+    r.session,r.sessionTrial,r.globalTrial,r.conditionId,r.block,r.shape,r.R,r.assignedA,r.rep,
+    +r.prevX.toFixed(3),+r.prevY.toFixed(3),+r.targetX.toFixed(3),+r.targetY.toFixed(3),
+    +r.A.toFixed(3),+r.angleDeg.toFixed(3),+r.idR.toFixed(6),+r.MT.toFixed(3),r.distractorCount,r.misses,+r.clickX.toFixed(3),+r.clickY.toFixed(3),+r.endpointError.toFixed(3)
+  ])];
+
+  const condHeader=['Condition_ID','Session','Shape','R_px','A_px','Trials','Avg_ID_R_bits','Avg_MT_ms','SD_MT_ms','Total_Misses','Avg_Endpoint_Error_px'];
+  const condData=[condHeader,...conditionSummaryData().filter(r=>r.n>0).map(r=>[
+    r.conditionId,r.session,r.shape,r.R,r.A,r.n,+r.avgID.toFixed(6),+r.avgMT.toFixed(3),+r.sdMT.toFixed(3),r.misses,+r.avgEndpointError.toFixed(3)
+  ])];
+
+  const shapeHeader=['Shape','Trials','Avg_R_px','Avg_A_px','Avg_ID_R_bits','Avg_MT_ms','Total_Misses','Error_Rate','Avg_Endpoint_Error_px'];
+  const shapeData=[shapeHeader,...shapeSummaryData().filter(r=>r.n>0).map(r=>[
+    r.shape,r.n,+r.avgR.toFixed(3),+r.avgA.toFixed(3),+r.avgID.toFixed(6),+r.avgMT.toFixed(3),r.misses,+r.errorRate.toFixed(6),+r.avgEndpointError.toFixed(3)
+  ])];
+
+  const srHeader=['Shape','R_px','Trials','Avg_A_px','Avg_ID_R_bits','Avg_MT_ms','Total_Misses','Error_Rate','Avg_Endpoint_Error_px'];
+  const srData=[srHeader,...shapeRadiusSummaryData().filter(r=>r.n>0).map(r=>[
+    r.shape,r.R,r.n,+r.avgA.toFixed(3),+r.avgID.toFixed(6),+r.avgMT.toFixed(3),r.misses,+r.errorRate.toFixed(6),+r.avgEndpointError.toFixed(3)
+  ])];
+
+  const contentTypes=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`;
+  const rootRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const workbook=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Trial Data" sheetId="1" r:id="rId1"/><sheet name="Condition Summary" sheetId="2" r:id="rId2"/><sheet name="Shape Summary" sheetId="3" r:id="rId3"/><sheet name="Shape x Radius Summary" sheetId="4" r:id="rId4"/></sheets></workbook>`;
+  const wbRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/></Relationships>`;
+
+  const blob=makeZip([
+    {name:'[Content_Types].xml',text:contentTypes},{name:'_rels/.rels',text:rootRels},{name:'xl/workbook.xml',text:workbook},{name:'xl/_rels/workbook.xml.rels',text:wbRels},
+    {name:'xl/worksheets/sheet1.xml',text:worksheetXml(trialData)},{name:'xl/worksheets/sheet2.xml',text:worksheetXml(condData)},
+    {name:'xl/worksheets/sheet3.xml',text:worksheetXml(shapeData)},{name:'xl/worksheets/sheet4.xml',text:worksheetXml(srData)}
+  ]);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='fitts_map_marker_results_combined.xlsx'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),0);
+  updateSummaries(); activateTab('conditionPanel');
+}
+
+function beginBlock(){
+  const block=blockPlan[blockIndex];
+  if(!block) return finishSession();
+  const {R,shape,A,conditionId}=block;
+  const existing=rowsForCondition(conditionId).length;
+  repInBlock=existing;
+  warmupPending=true;
+  const plan=state.trialPlans[conditionId];
+  if(!plan || !Array.isArray(plan.directions) || plan.directions.length!==6){
+    throw new Error(`Missing six-direction plan for ${conditionId}.`);
+  }
+
+  // The warm-up marker is also a positioning anchor for this condition. It uses the same
+  // shape and R but is not timed or recorded. This guarantees all six following A-movements fit.
+  const center=controlledBlockAnchor(A,R,plan.directions);
+  const warmDistractorCount=1+Math.floor(Math.random()*5);
+  const distractors=randomDistractors(center,R,warmDistractorCount);
+  current={shape,R,assignedA:A,rep:0,block:blockIndex+1,conditionId,center,A:0,movementAngle:0,angle:referenceAngleForShape(shape,0),idR:0,misses:0,distractorCount:distractors.length,distractors,isWarmup:true};
+  makeTrialMarkers(shape,R,center.x,center.y,current.angle,distractors);
+  debugLayer.innerHTML='';
+
+  stats.session.textContent=`${currentSession} / 2`;
+  stats.trial.textContent=`${sessionTrialCount(currentSession)} / ${TRIALS_PER_SESSION}`;
+  stats.block.textContent=`${blockIndex+1} / ${blockPlan.length} · warm-up positioning marker`;
+  stats.shape.textContent=LABELS[shape]; stats.r.textContent=`${R} px`;
+  stats.assignedA.textContent=`${A} px`; stats.a.textContent='warm-up'; stats.id.textContent=`${Math.log2(1+A/R).toFixed(3)} bits`;
+  updateRemaining();
+}
+
+function spawnNext(){
+  if(!running) return;
+  if(blockIndex>=blockPlan.length) return finishSession();
+  const block=blockPlan[blockIndex];
+  if(!block || !previousCenter) return;
+  const {R,shape,A,conditionId}=block;
+  const plan=state.trialPlans[conditionId];
+  const repIndex=rowsForCondition(conditionId).length;
+  if(repIndex>=REPS_PER_BLOCK){
+    blockIndex++; repInBlock=0; previousCenter=null;
+    if(blockIndex>=blockPlan.length) return finishSession();
+    beginBlock(); return;
+  }
+
+  const directionDeg=plan.directions[repIndex];
+  const pos=controlledTargetCenter(previousCenter,A,R,directionDeg);
+  const center=pos.center;
+  const movementAngle=pos.movementAngle;
+  const actualA=dist(center,previousCenter);
+  const shapeAngle=referenceAngleForShape(shape,movementAngle);
+  const idR=Math.log2(1+actualA/R);
+  const requestedDistractors=plan.distractors[repIndex];
+  const distractors=randomDistractors(center,R,requestedDistractors);
+  const actualDistractorCount=distractors.length;
+  current={shape,R,assignedA:A,rep:repIndex+1,block:blockIndex+1,conditionId,center,A:actualA,movementAngle,angle:shapeAngle,idR,misses:0,distractorCount:actualDistractorCount,distractors,isWarmup:false};
+  makeTrialMarkers(shape,R,center.x,center.y,shapeAngle,distractors);
+  drawDebug(previousCenter,center,shapeAngle,R);
+  stats.session.textContent=`${currentSession} / 2`;
+  stats.trial.textContent=`${sessionTrialCount(currentSession)+1} / ${TRIALS_PER_SESSION}`;
+  stats.block.textContent=`${blockIndex+1} / ${blockPlan.length} · rep ${repIndex+1}/${REPS_PER_BLOCK} · ${directionDeg}°`;
+  stats.shape.textContent=LABELS[shape]; stats.r.textContent=`${R} px`;
+  stats.assignedA.textContent=`${A} px`; stats.a.textContent=`${actualA.toFixed(1)} px`; stats.id.textContent=`${idR.toFixed(3)} bits`;
+  updateRemaining(); t0=performance.now();
+}
+
+function finishSession(){
+  running=false; current=null; previousCenter=null; targetLayer.innerHTML=''; debugLayer.innerHTML='';
+  state.sessions[currentSession].complete=true; state.sessions[currentSession].completedAt=new Date().toISOString(); saveState();
+  stats.session.textContent=`${currentSession} / 2`; stats.trial.textContent=`${TRIALS_PER_SESSION} / ${TRIALS_PER_SESSION}`; stats.block.textContent='Session complete';
+  updateSummaries(); updateRemaining(); updateStartButton();
+  if(currentSession===1){
+    alert(`Session 1 complete. ${TRIALS_PER_SESSION} recorded movements are saved. You may close this page and return later to continue Session 2 using the same HTML file.`);
+  }else{
+    activateTab('conditionPanel');
+    alert(`Full experiment complete. Session 1 and Session 2 have been merged into one ${TOTAL_TRIALS}-trial dataset.`);
+  }
+}
+
+function hitTarget(e){
+  e.preventDefault(); e.stopPropagation();
+  if(!running || !current) return;
+  const t1=performance.now();
+  if(current.isWarmup){
+    previousCenter={...current.center}; warmupPending=false; spawnNext(); return;
+  }
+  const mt=t1-t0; const rect=arena.getBoundingClientRect(); const clickX=e.clientX-rect.left; const clickY=e.clientY-rect.top;
+  const endpointError=Math.hypot(clickX-current.center.x,clickY-current.center.y);
+  const sessionTrial=sessionTrialCount(currentSession)+1; const globalTrial=rows.length+1;
+  const row={
+    session:currentSession,sessionTrial,globalTrial,conditionId:current.conditionId,block:current.block,shape:LABELS[current.shape],R:current.R,assignedA:current.assignedA,rep:current.rep,
+    prevX:previousCenter.x,prevY:previousCenter.y,targetX:current.center.x,targetY:current.center.y,A:current.A,angleDeg:rad2deg(current.movementAngle),idR:current.idR,MT:mt,
+    distractorCount:current.distractorCount,misses:current.misses||0,clickX,clickY,endpointError
+  };
+  rows.push(row); saveState(); appendRow(row); updateSummaries(); updateRemaining(); updateStartButton(); stats.mt.textContent=`${mt.toFixed(1)} ms`;
+  previousCenter={...current.center}; repInBlock=rowsForCondition(current.conditionId).length;
+  if(repInBlock>=REPS_PER_BLOCK){
+    blockIndex++; repInBlock=0; previousCenter=null;
+    if(blockIndex>=blockPlan.length){ finishSession(); return; }
+    beginBlock(); return;
+  }
+  spawnNext();
+}
+
+function appendRow(r){
+  const tr=document.createElement('tr');
+  const vals=[r.session,r.sessionTrial,r.globalTrial,r.conditionId,r.block,r.shape,r.R,r.assignedA,r.rep,r.prevX.toFixed(1),r.prevY.toFixed(1),r.targetX.toFixed(1),r.targetY.toFixed(1),r.A.toFixed(2),r.angleDeg.toFixed(2),r.idR.toFixed(4),r.MT.toFixed(2),r.distractorCount,r.misses,r.clickX.toFixed(1),r.clickY.toFixed(1),r.endpointError.toFixed(2)];
+  vals.forEach(v=>{ const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); }); tbody.appendChild(tr);
+}
+
+function renderExistingRows(){ tbody.innerHTML=''; rows.forEach(appendRow); updateSummaries(); updateRemaining(); updateStartButton(); }
+
+function startOrResumeExperiment(){
+  currentSession=determineNextSession();
+  if(currentSession===0){ alert('The full experiment is already complete.'); return; }
+  blockPlan=buildSessionPlan(currentSession); blockIndex=0; repInBlock=0; previousCenter=null; current=null;
+  if(blockPlan.length===0){ finishSession(); return; }
+  running=true; activateTab('trialPanel'); beginBlock();
+}
+
+function downloadProgressBackup(){
+  saveState(); const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='fitts_map_marker_progress_backup.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),0);
+}
+
+function resetFullExperiment(){
+  if(!confirm('Reset the entire experiment? This permanently clears saved Session 1 and Session 2 progress in this browser.')) return;
+  localStorage.removeItem(STORAGE_KEY); state=createFreshState(); rows=[]; running=false; current=null; previousCenter=null; tbody.innerHTML='';
+  currentSession=1; stats.session.textContent='-'; stats.trial.textContent=`0 / ${TRIALS_PER_SESSION}`; stats.block.textContent='-'; stats.shape.textContent='-'; stats.r.textContent='-'; stats.assignedA.textContent='-'; stats.a.textContent='-'; stats.id.textContent='-'; stats.mt.textContent='-';
+  targetLayer.innerHTML=''; debugLayer.innerHTML=''; warmupPending=false; previousCenter=null; drawMapBackground(); saveState(); renderExistingRows();
+}
+
+function importProgressFile(file){
+  const reader=new FileReader(); reader.onload=()=>{
+    try{ const parsed=JSON.parse(reader.result); if(parsed.version!==EXPERIMENT_VERSION || !Array.isArray(parsed.rows) || !parsed.plans) throw new Error('Invalid backup');
+      state=parsed; rows=state.rows||[]; localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); running=false; current=null; currentSession=determineNextSession()||2; renderExistingRows(); alert('Progress imported successfully.');
+    }catch(err){ alert('Could not import this progress backup.'); }
+  }; reader.readAsText(file);
+}
+
+arena.addEventListener('pointerdown',(e)=>{
+  if(!running || !current) return;
+  current.misses=(current.misses||0)+1;
+});
+
+startBtn.addEventListener('click', startOrResumeExperiment);
+exportBtn.addEventListener('click',exportWorkbook);
+backupBtn.addEventListener('click',downloadProgressBackup);
+resetBtn.addEventListener('click',resetFullExperiment);
+importProgress.addEventListener('change',()=>{ if(importProgress.files && importProgress.files[0]) importProgressFile(importProgress.files[0]); importProgress.value=''; });
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>activateTab(btn.dataset.tab)));
+toggleVectorBtn.addEventListener('click',()=>{
+  showVector=!showVector; toggleVectorBtn.textContent=showVector?'Hide experiment vector':'Show experiment vector';
+  if(current) drawDebug(previousCenter,current.center,current.angle,current.R);
+});
+
+state=loadState() || createFreshState();
+rows=state.rows || [];
+currentSession=determineNextSession() || 2;
+saveState();
+drawMapBackground();
+renderExistingRows();
+
+</script>
+</body>
+</html>
