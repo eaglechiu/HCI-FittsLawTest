@@ -13,7 +13,7 @@
 | 正式試驗（Recorded Trials） | 48 個條件 × 每條件 6 次，共 288 次 |
 | 實驗階段（Sessions） | 2 個階段，每階段 144 次 |
 
-> **研究解讀：**原報告將資料定位為單一使用者的先導研究（Within-user Pilot Study）。288 次重複量測（Repeated Measurements）不等於 288 位獨立受試者；報告中的 p 值（p-values）屬探索性結果，不能直接推論至一般使用者族群。自訂的半徑式難度指標（Radius-based Index of Difficulty, ID_R）也不等同於傳統以方向寬度（Directional Width, W）定義的難度指標。
+> **研究解讀：** 原報告將資料定位為單一使用者的先導研究（Within-user Pilot Study）。288 次重複量測（Repeated Measurements）不等於 288 位獨立受試者；報告中的 p 值（p-values）屬探索性結果，不能直接推論至一般使用者族群。自訂的半徑式難度指標（Radius-based Index of Difficulty, ID_R）也不等同於傳統以方向寬度（Directional Width, W）定義的難度指標。
 
 ## 開始使用（Getting Started）
 
