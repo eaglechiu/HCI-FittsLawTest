@@ -53,8 +53,6 @@
 
 ## 完整報告（Full Report）
 
-以下將 `HCI_Fitts_Map_Marker_Report_EDITABLE.docx` 的英文全文、數值、八個表格與五張原圖翻譯為繁體中文，並轉為適合網頁閱讀的 Markdown 格式。學生姓名、學號與繳交日期沿用來源報告。本次文件更新並未重新執行統計分析，且本節未包含原始試驗資料。
-
 ### 互動地圖中目標幾何形狀對菲茲定律選取表現的影響
 
 人工智慧輔助的菲茲定律實驗與實證分析（AI-Assisted Fitts' Law Experiment and Empirical Analysis）
