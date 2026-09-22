@@ -53,8 +53,6 @@ The site is hosted with GitHub Pages. You can also download the [HTML file](./fi
 
 ## Full Report
 
-The following preserves the complete English text, values, eight tables, and five original figures from `HCI_Fitts_Map_Marker_Report_EDITABLE.docx` in a web-friendly Markdown format. The student name, student ID, and submission date are retained from the source report. The statistical analysis was not rerun for this documentation update, and the original trial data are not included in this report section.
-
 ### Effects of Target Geometry on Fitts-Law-Based Selection in an Interactive Map
 
 AI-Assisted Fitts' Law Experiment and Empirical Analysis
