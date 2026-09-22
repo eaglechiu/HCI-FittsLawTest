@@ -1,33 +1,35 @@
+[English](./README.md) | [繁體中文](./README_zh-TW.md)
+
 # HCI-FittsLawTest
 
-**[直接開啟線上實驗（Open Online Experiment）](https://eaglechiu.github.io/HCI-FittsLawTest/)**
+**[Open the Online Experiment](https://eaglechiu.github.io/HCI-FittsLawTest/)**
 
-以互動地圖標記選取研究菲茲定律（Fitts’ Law）與目標幾何形狀（Target Geometry）的人機互動（Human–Computer Interaction, HCI）實驗。
+This Human–Computer Interaction (HCI) experiment studies Fitts' Law and target geometry through marker selection on an interactive map.
 
-使用者在地圖上尋找並點擊青色目標標記（Target Marker），背景同時呈現 1–5 個灰色干擾標記（Distractor Markers）。本專案控制移動距離、標記外接圓半徑與移動方向，觀察不同形狀的選取時間（Selection Time）與誤點（Misses）。
+Participants locate and click a cyan target marker while one to five gray distractor markers are displayed. The experiment controls movement distance, marker circumradius, and movement direction to examine how target shape affects selection time and misses.
 
-| 實驗項目（Experimental Factor） | 設定（Configuration） |
+| Experimental factor | Configuration |
 | --- | --- |
-| 目標形狀（Target Shape） | 8 種 |
-| 外接圓半徑（Circumradius, R） | 30、50、70 px |
-| 中心間移動距離（Center-to-center Movement Distance, A） | 280、520 px |
-| 移動方向（Movement Direction） | 0°、60°、120°、180°、240°、300° |
-| 正式試驗（Recorded Trials） | 48 個條件 × 每條件 6 次，共 288 次 |
-| 實驗階段（Sessions） | 2 個階段，每階段 144 次 |
+| Target shape | 8 shapes |
+| Circumradius (R) | 30, 50, and 70 px |
+| Center-to-center movement distance (A) | 280 and 520 px |
+| Movement direction | 0°, 60°, 120°, 180°, 240°, and 300° |
+| Recorded trials | 48 conditions × 6 trials per condition = 288 trials |
+| Sessions | 2 sessions with 144 trials each |
 
-> **研究解讀：** 原報告將資料定位為單一使用者的先導研究（Within-user Pilot Study）。288 次重複量測（Repeated Measurements）不等於 288 位獨立受試者；報告中的 p 值（p-values）屬探索性結果，不能直接推論至一般使用者族群。自訂的半徑式難度指標（Radius-based Index of Difficulty, ID_R）也不等同於傳統以方向寬度（Directional Width, W）定義的難度指標。
+> **Research interpretation:** The original report treats the data as a within-user pilot study. The 288 repeated measurements do not represent 288 independent participants; the reported p-values are exploratory and cannot be generalized directly to the broader user population. The custom radius-based Index of Difficulty (ID_R) is also not equivalent to the conventional index defined using directional width (W).
 
-## 開始使用（Getting Started）
+## Getting Started
 
-1. 以桌面瀏覽器（Desktop Browser）開啟 [線上實驗（Online Experiment）](https://eaglechiu.github.io/HCI-FittsLawTest/)，即可開始使用，不需要下載或安裝。
-2. 依頁面提示開始實驗，尋找並點擊青色標記；每個條件先完成不記錄的暖身定位（Warm-up Positioning），再進行六次正式選取。
-3. 完成兩個實驗階段（Sessions）後，使用頁面上的匯出功能保存結果；需要轉移進度時，使用進度匯出／匯入（Export / Import Progress）。
+1. Open the [online experiment](https://eaglechiu.github.io/HCI-FittsLawTest/) in a desktop browser. No installation is required.
+2. Follow the on-screen instructions, locate the cyan marker, and click it. Each condition begins with an unrecorded warm-up positioning trial, followed by six recorded selections.
+3. After completing both sessions, use the page's export function to save the results. Use **Export / Import Progress** when moving progress between browsers or devices.
 
-網站由 GitHub Pages 提供靜態網站服務，也可下載 [HTML 檔案](./fitts_interactive_map_6dir.html) 離線執行。進度保存在瀏覽器本機儲存空間（localStorage）；更換瀏覽器或清除網站資料前，請先匯出進度備份。下載版與線上版的進度不會自動共用；轉移時先在原頁面選擇 `Download Progress Backup`，再於新頁面使用 `Import Progress`。地圖需要足夠的桌面顯示空間，才能容納最長的 520 px 移動距離。
+The site is hosted with GitHub Pages. You can also download the [HTML file](./fitts_interactive_map_6dir.html) and run it locally. Progress is stored in the browser's `localStorage`; export a backup before changing browsers or clearing site data. The downloaded and online versions do not automatically share progress. To transfer it, select `Download Progress Backup` on the original page, then use `Import Progress` on the new page. The map requires sufficient desktop display space to accommodate the maximum movement distance of 520 px.
 
-## 內容導覽（Contents）
+## Contents
 
-- [完整報告（Full Report）](#full-report)
+- [Full Report](#full-report)
 - [1. Executive Summary](#1-executive-summary)
 - [2. Scenario, Innovation, and Application](#2-scenario-innovation-and-application)
 - [3. Experimental Design](#3-experimental-design)
@@ -37,19 +39,21 @@
 - [7. Conclusion](#7-conclusion)
 - [Appendix A. Key dataset checks](#appendix-a-key-dataset-checks)
 
-## 檔案（Files）
+## Files
 
-| 路徑（Path） | 內容（Contents） |
+| Path | Contents |
 | --- | --- |
-| [`fitts_interactive_map_6dir.html`](./fitts_interactive_map_6dir.html) | 六方向互動地圖實驗（Six-direction Interactive Map Experiment） |
-| [`README.md`](./README.md) | 專案介紹、操作方式與完整報告（Full Report） |
-| [`assets/report/`](./assets/report/) | 原報告的五張圖（Five Original Report Figures） |
+| [`index.html`](./index.html) | GitHub Pages entry point |
+| [`fitts_interactive_map_6dir.html`](./fitts_interactive_map_6dir.html) | Six-direction interactive map experiment |
+| [`README.md`](./README.md) | English project overview and full report |
+| [`README_zh-TW.md`](./README_zh-TW.md) | Traditional Chinese project overview and full report |
+| [`assets/report/`](./assets/report/) | Five figures from the original report |
 
 <a id="full-report"></a>
 
-## 完整報告（Full Report）
+## Full Report
 
-以下保留 `HCI_Fitts_Map_Marker_Report_EDITABLE.docx` 的英文全文、數值、八個表格與五張原圖，轉為適合網頁閱讀的 Markdown 格式。姓名、學號與繳交日期仍保留原報告的待填欄位。此處為既有報告的完整呈現，並未重新執行統計分析；原始試驗資料不包含在本次文件更新中。
+The following preserves the complete English text, values, eight tables, and five original figures from `HCI_Fitts_Map_Marker_Report_EDITABLE.docx` in a web-friendly Markdown format. The student name, student ID, and submission date are retained from the source report. The statistical analysis was not rerun for this documentation update, and the original trial data are not included in this report section.
 
 ### Effects of Target Geometry on Fitts-Law-Based Selection in an Interactive Map
 
@@ -60,10 +64,8 @@ AI-Assisted Fitts' Law Experiment and Empirical Analysis
 | Course / Assignment | HCI - Fitts' Law Experiment, Part II |
 | Scenario | Interactive Monitoring Map marker selection |
 | Dataset | 288 recorded trials, two sessions |
-| Student | \[邱奕高 112034011\] |
-| Date | \[2026/09/20\] |
-
-Replace bracketed placeholders before submission.
+| Student | [Name / Student ID] |
+| Date | 2026/09/20 |
 
 ### 1. Executive Summary
 
@@ -239,4 +241,3 @@ The final experiment produced a complete and balanced dataset of 288 recorded se
 | MT range | 456.6 to 2573.5 ms |
 
 Suggested submission additions: GitHub Pages URL, screenshot or embedded screen recording, and any course-required citation/reference formatting.
-
