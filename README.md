@@ -27,6 +27,12 @@ Participants locate and click a cyan target marker while one to five gray distra
 
 The site is hosted with GitHub Pages. You can also download the [HTML file](./fitts_interactive_map_6dir.html) and run it locally. Progress is stored in the browser's `localStorage`; export a backup before changing browsers or clearing site data. The downloaded and online versions do not automatically share progress. To transfer it, select `Download Progress Backup` on the original page, then use `Import Progress` on the new page. The map requires sufficient desktop display space to accommodate the maximum movement distance of 520 px.
 
+## Experiment Demo
+
+Watch the interactive map marker selection experiment:
+
+https://github.com/user-attachments/assets/2a0c2c05-e243-43af-ab42-e0e72b4fa22c
+
 ## Contents
 
 - [Full Report](#full-report)

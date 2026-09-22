@@ -27,6 +27,12 @@
 
 網站使用 GitHub Pages 提供靜態網站服務，也可下載 [HTML 檔案](./fitts_interactive_map_6dir.html)離線執行。進度保存在瀏覽器的本機儲存空間（`localStorage`）；更換瀏覽器或清除網站資料前，請先匯出備份。下載版與線上版不會自動共用進度；若要轉移，請先在原頁面選擇 `Download Progress Backup`，再於新頁面使用 `Import Progress`。地圖需要足夠的桌面顯示空間，才能容納最長 520 px 的移動距離。
 
+## 實驗操作影片（Experiment Demo）
+
+觀看互動地圖標記選取實驗的操作影片：
+
+https://github.com/user-attachments/assets/2a0c2c05-e243-43af-ab42-e0e72b4fa22c
+
 ## 內容導覽（Contents）
 
 - [完整報告](#full-report)
