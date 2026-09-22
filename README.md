@@ -244,4 +244,3 @@ The final experiment produced a complete and balanced dataset of 288 recorded se
 | Total misses | 15 |
 | MT range | 456.6 to 2573.5 ms |
 
-Suggested submission additions: GitHub Pages URL, screenshot or embedded screen recording, and any course-required citation/reference formatting.
