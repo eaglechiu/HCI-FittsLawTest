@@ -62,7 +62,7 @@ AI-Assisted Fitts' Law Experiment and Empirical Analysis
 | Course / Assignment | HCI - Fitts' Law Experiment, Part II |
 | Scenario | Interactive Monitoring Map marker selection |
 | Dataset | 288 recorded trials, two sessions |
-| Student | [Name / Student ID] |
+| Student | [邱奕高 / 112034011] |
 | Date | 2026/09/20 |
 
 ### 1. Executive Summary
